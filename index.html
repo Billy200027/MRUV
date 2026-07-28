@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRUV - Calculadora y Simulador</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ==================== ENCABEZADO ==================== -->
+    <header class="header">
+        <div class="container">
+            <h1>Movimiento Rectilíneo Uniformemente Variado (MRUV)</h1>
+            <p class="subtitle">
+                El MRUV es un modelo cinemático en el que un cuerpo se desplaza 
+                a lo largo de una trayectoria recta con <strong>aceleración constante</strong>. 
+                Esta aplicación permite calcular, simular y visualizar cualquier problema de MRUV 
+                de manera interactiva.
+            </p>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- ==================== CALCULADORA ==================== -->
+        <section class="card calculator-card">
+            <h2>Calculadora Inteligente de MRUV</h2>
+            <p class="hint">Ingresa los datos conocidos. Deja vacíos los campos que deseas calcular.</p>
+
+            <div class="form-grid">
+                <div class="input-group">
+                    <label for="x0">Posición inicial (x₀)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="x0" step="any" placeholder="Ej: 0">
+                        <span class="unit">m</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="x">Posición final (x)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="x" step="any" placeholder="Ej: 100">
+                        <span class="unit">m</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="dx">Desplazamiento (Δx)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="dx" step="any" placeholder="Ej: 100">
+                        <span class="unit">m</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="v0">Velocidad inicial (v₀)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="v0" step="any" placeholder="Ej: 5">
+                        <span class="unit">m/s</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="v">Velocidad final (v)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="v" step="any" placeholder="Ej: 25">
+                        <span class="unit">m/s</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="a">Aceleración (a)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="a" step="any" placeholder="Ej: 2">
+                        <span class="unit">m/s²</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="t">Tiempo (t)</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="t" step="any" placeholder="Ej: 10">
+                        <span class="unit">s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button id="btnCalcular" class="btn btn-primary">▶ Calcular</button>
+                <button id="btnReset" class="btn btn-secondary">↺ Restablecer</button>
+                <button id="btnEjemplo" class="btn btn-accent">🎲 Generar ejemplo aleatorio</button>
+            </div>
+
+            <div id="mensajeError" class="mensaje error"></div>
+            <div id="mensajeInfo" class="mensaje info"></div>
+        </section>
+
+        <!-- ==================== RESULTADOS ==================== -->
+        <section id="resultados" class="card results-card hidden">
+            <h2>Resultados</h2>
+            <div class="results-grid">
+                <div class="result-item"><span class="res-label">x₀</span><span class="res-val" id="res-x0">—</span><span class="res-unit">m</span></div>
+                <div class="result-item"><span class="res-label">x</span><span class="res-val" id="res-x">—</span><span class="res-unit">m</span></div>
+                <div class="result-item"><span class="res-label">Δx</span><span class="res-val" id="res-dx">—</span><span class="res-unit">m</span></div>
+                <div class="result-item"><span class="res-label">v₀</span><span class="res-val" id="res-v0">—</span><span class="res-unit">m/s</span></div>
+                <div class="result-item"><span class="res-label">v</span><span class="res-val" id="res-v">—</span><span class="res-unit">m/s</span></div>
+                <div class="result-item"><span class="res-label">a</span><span class="res-val" id="res-a">—</span><span class="res-unit">m/s²</span></div>
+                <div class="result-item"><span class="res-label">t</span><span class="res-val" id="res-t">—</span><span class="res-unit">s</span></div>
+            </div>
+        </section>
+
+        <!-- ==================== PROCEDIMIENTO ==================== -->
+        <section id="procedimiento" class="card proc-card hidden">
+            <h2>Procedimiento Matemático</h2>
+            <div id="procContent"></div>
+        </section>
+
+        <!-- ==================== SIMULACIÓN ==================== -->
+        <section class="card sim-card">
+            <h2>Simulación Visual</h2>
+            <div class="sim-controls">
+                <button id="btnSimPlay" class="btn btn-primary">▶ Iniciar simulación</button>
+                <button id="btnSimReset" class="btn btn-secondary">↺ Reiniciar</button>
+                <div class="sim-speed">
+                    <label for="simSpeed">Velocidad:</label>
+                    <input type="range" id="simSpeed" min="0.2" max="3" step="0.1" value="1">
+                </div>
+            </div>
+            <canvas id="simCanvas" width="900" height="220"></canvas>
+            <div class="sim-status" id="simStatus">
+                <span>t = <strong id="sim-t">0.00</strong> s</span>
+                <span>x = <strong id="sim-x">0.00</strong> m</span>
+                <span>v = <strong id="sim-v">0.00</strong> m/s</span>
+                <span>a = <strong id="sim-a">0.00</strong> m/s²</span>
+            </div>
+        </section>
+
+        <!-- ==================== GRÁFICAS ==================== -->
+        <section class="card graphs-card">
+            <h2>Gráficas Cinemáticas</h2>
+            <div class="graphs-grid">
+                <div class="graph-box">
+                    <h3>Posición vs Tiempo</h3>
+                    <canvas id="graphPos" width="420" height="280"></canvas>
+                </div>
+                <div class="graph-box">
+                    <h3>Velocidad vs Tiempo</h3>
+                    <canvas id="graphVel" width="420" height="280"></canvas>
+                </div>
+                <div class="graph-box">
+                    <h3>Aceleración vs Tiempo</h3>
+                    <canvas id="graphAcc" width="420" height="280"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== CONCEPTOS ==================== -->
+        <section class="card concepts-card">
+            <h2>Conceptos Importantes</h2>
+            <div class="concepts-grid">
+                <div class="concept-item">
+                    <div class="concept-icon">📐</div>
+                    <p>En el MRUV la <strong>aceleración es constante</strong> en magnitud, dirección y sentido.</p>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-icon">📈</div>
+                    <p>La <strong>pendiente</strong> de la gráfica velocidad-tiempo representa la <strong>aceleración</strong>.</p>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-icon">📊</div>
+                    <p>El <strong>área bajo</strong> la gráfica velocidad-tiempo representa el <strong>desplazamiento</strong>.</p>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-icon">🔍</div>
+                    <p>La <strong>pendiente</strong> de la gráfica posición-tiempo representa la <strong>velocidad instantánea</strong>.</p>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-icon">⬆️</div>
+                    <p>Una aceleración <strong>positiva</strong> incrementa la rapidez en el sentido del movimiento.</p>
+                </div>
+                <div class="concept-item">
+                    <div class="concept-icon">⬇️</div>
+                    <p>Una aceleración <strong>negativa</strong> disminuye la rapidez (frenado) o la invierte.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== MATERIAL DE APOYO ==================== -->
+        <section class="card support-card">
+            <h2>Material de Apoyo</h2>
+            <div class="support-buttons">
+                <a href="pdf/documento.pdf" class="btn btn-large btn-doc" download>📄 Descargar documento PDF</a>
+                <a href="pdf/diapositivas.pdf" class="btn btn-large btn-slide" download>📑 Descargar diapositivas PDF</a>
+            </div>
+            <p class="support-note">Los archivos PDF contienen la teoría completa, ejemplos resueltos y ejercicios propuestos sobre MRUV.</p>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Recurso didáctico universitario — MRUV</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
