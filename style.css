@@ -18,7 +18,7 @@ html {
 
 body {
     font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #FFE5B4 0%, #FFD1DC 25%, #E0BBE4 50%, #B5EAD7 75%, #C7CEEA 100%);
+    background: linear-gradient(135deg, #189 0%, #2e9 25%, #E0BBE4 50%, #B5EAD7 75%, #C7CEEA 100%);
     min-height: 100vh;
     overflow-x: hidden;
     color: #333;
