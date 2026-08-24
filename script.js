@@ -1,791 +1,516 @@
-/* =============================================
-   MRUV - Calculadora y Simulador
-   JavaScript puro, sin dependencias externas
-   ============================================= */
+/* ============================================
+   APRENDAMOS LOS NÚMEROS - LÓGICA DEL JUEGO
+   Para niños de 4 a 6 años
+   ============================================ */
 
-// ============================================================
-// 1. VARIABLES GLOBALES Y ESTADO
-// ============================================================
+// ============================================
+// VARIABLES GLOBALES
+// ============================================
+let modoActual = 'facil';
+let tiempoLimite = 7; // segundos
+let tiempoRestante = 7;
+let temporizadorInterval = null;
+let preguntaActual = 0;
+let totalPreguntas = 10;
+let puntos = 0;
+let correctas = 0;
+let incorrectas = 0;
+let sinResponder = 0;
+let numeroMostrado = 0;
+let respuestaCorrecta = 0;
+let opcionesActuales = [];
+let posicionCorrecta = 0;
+let puedeResponder = false;
+let juegoActivo = false;
 
-/** Objeto que almacena los valores actuales de las variables cinemáticas */
-let state = {
-    x0: null,   // Posición inicial (m)
-    x:  null,   // Posición final (m)
-    dx: null,   // Desplazamiento (m)
-    v0: null,   // Velocidad inicial (m/s)
-    v:  null,   // Velocidad final (m/s)
-    a:  null,   // Aceleración (m/s²)
-    t:  null    // Tiempo (s)
-};
+// Circunferencia del círculo SVG (2 * π * 45 ≈ 283)
+const CIRCUNFERENCIA = 283;
 
-/** Referencias a los elementos del DOM */
-const inputs = {
-    x0: document.getElementById('x0'),
-    x:  document.getElementById('x'),
-    dx: document.getElementById('dx'),
-    v0: document.getElementById('v0'),
-    v:  document.getElementById('v'),
-    a:  document.getElementById('a'),
-    t:  document.getElementById('t')
-};
+// ============================================
+// UTILIDADES
+// ============================================
 
-const resultEls = {
-    x0: document.getElementById('res-x0'),
-    x:  document.getElementById('res-x'),
-    dx: document.getElementById('res-dx'),
-    v0: document.getElementById('res-v0'),
-    v:  document.getElementById('res-v'),
-    a:  document.getElementById('res-a'),
-    t:  document.getElementById('res-t')
-};
-
-const msgError = document.getElementById('mensajeError');
-const msgInfo  = document.getElementById('mensajeInfo');
-const sectionResults = document.getElementById('resultados');
-const sectionProc    = document.getElementById('procedimiento');
-const procContent    = document.getElementById('procContent');
-
-// Canvas de simulación
-const simCanvas = document.getElementById('simCanvas');
-const simCtx    = simCanvas.getContext('2d');
-
-// Canvas de gráficas
-const graphPosCanvas = document.getElementById('graphPos');
-const graphVelCanvas = document.getElementById('graphVel');
-const graphAccCanvas = document.getElementById('graphAcc');
-const graphPosCtx = graphPosCanvas.getContext('2d');
-const graphVelCtx = graphVelCanvas.getContext('2d');
-const graphAccCtx = graphAccCanvas.getContext('2d');
-
-// Variables de simulación
-let simAnimationId = null;
-let simTime = 0;
-let simSpeed = 1;
-let simRunning = false;
-
-// ============================================================
-// 2. UTILIDADES MATEMÁTICAS
-// ============================================================
-
-function round(num, dec = 3) {
-    if (num === null || num === undefined || isNaN(num)) return null;
-    return parseFloat(num.toFixed(dec));
+/**
+ * Genera un número aleatorio entre min y max (inclusive)
+ */
+function aleatorio(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function fmt(num) {
-    if (num === null || num === undefined || isNaN(num)) return '—';
-    const r = round(num, 3);
-    return parseFloat(r.toString()).toString();
-}
-
-function isValid(val) {
-    return val !== null && val !== undefined && !isNaN(val) && isFinite(val);
-}
-
-function readInput(input) {
-    const raw = input.value.trim();
-    if (raw === '') return null;
-    const num = parseFloat(raw);
-    return isNaN(num) ? null : num;
-}
-
-function approxEqual(a, b, tol = 1e-6) {
-    if (!isValid(a) || !isValid(b)) return false;
-    return Math.abs(a - b) <= tol * Math.max(Math.abs(a), Math.abs(b), 1);
-}
-
-// ============================================================
-// 3. LECTURA Y ESCRITURA DE ESTADO
-// ============================================================
-
-function readStateFromInputs() {
-    state.x0 = readInput(inputs.x0);
-    state.x  = readInput(inputs.x);
-    state.dx = readInput(inputs.dx);
-    state.v0 = readInput(inputs.v0);
-    state.v  = readInput(inputs.v);
-    state.a  = readInput(inputs.a);
-    state.t  = readInput(inputs.t);
-}
-
-function writeResults() {
-    resultEls.x0.textContent = fmt(state.x0);
-    resultEls.x.textContent  = fmt(state.x);
-    resultEls.dx.textContent = fmt(state.dx);
-    resultEls.v0.textContent = fmt(state.v0);
-    resultEls.v.textContent  = fmt(state.v);
-    resultEls.a.textContent  = fmt(state.a);
-    resultEls.t.textContent  = fmt(state.t);
-}
-
-function showResults(show) {
-    sectionResults.classList.toggle('hidden', !show);
-}
-
-function showProcedure(show) {
-    sectionProc.classList.toggle('hidden', !show);
-}
-
-function showError(msg) {
-    msgError.textContent = msg;
-    msgError.classList.add('visible');
-    msgInfo.classList.remove('visible');
-}
-
-function showInfo(msg) {
-    msgInfo.textContent = msg;
-    msgInfo.classList.add('visible');
-    msgError.classList.remove('visible');
-}
-
-function clearMessages() {
-    msgError.classList.remove('visible');
-    msgInfo.classList.remove('visible');
-}
-
-// ============================================================
-// 4. CÁLCULO INTELIGENTE DE MRUV
-// ============================================================
-
-function calcularRelacionDx() {
-    let cambio = false;
-    if (isValid(state.x0) && isValid(state.x) && !isValid(state.dx)) {
-        state.dx = state.x - state.x0;
-        cambio = true;
-    } else if (isValid(state.x0) && isValid(state.dx) && !isValid(state.x)) {
-        state.x = state.x0 + state.dx;
-        cambio = true;
-    } else if (isValid(state.x) && isValid(state.dx) && !isValid(state.x0)) {
-        state.x0 = state.x - state.dx;
-        cambio = true;
+/**
+ * Mezcla un array aleatoriamente (Fisher-Yates)
+ */
+function mezclar(array) {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = aleatorio(0, i);
+        [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return cambio;
+    return arr;
 }
 
-function calcularEcuacion1() {
-    let cambio = false;
-    const s = state;
-    if (isValid(s.v0) && isValid(s.a) && isValid(s.t) && !isValid(s.v)) {
-        s.v = s.v0 + s.a * s.t;
-        cambio = true;
-    } else if (isValid(s.v) && isValid(s.a) && isValid(s.t) && !isValid(s.v0)) {
-        s.v0 = s.v - s.a * s.t;
-        cambio = true;
-    } else if (isValid(s.v) && isValid(s.v0) && isValid(s.t) && !isValid(s.a)) {
-        s.a = (s.v - s.v0) / s.t;
-        cambio = true;
-    } else if (isValid(s.v) && isValid(s.v0) && isValid(s.a) && !isValid(s.t)) {
-        if (s.a !== 0) {
-            s.t = (s.v - s.v0) / s.a;
-            cambio = true;
-        }
-    }
-    return cambio;
+/**
+ * Muestra una pantalla y oculta las demás
+ */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+    document.getElementById(id).classList.add('activa');
 }
 
-function calcularEcuacion2() {
-    let cambio = false;
-    const s = state;
-    if (isValid(s.x0) && isValid(s.v0) && isValid(s.a) && isValid(s.t) && !isValid(s.x)) {
-        s.x = s.x0 + s.v0 * s.t + 0.5 * s.a * s.t * s.t;
-        cambio = true;
-    } else if (isValid(s.x) && isValid(s.x0) && isValid(s.v0) && isValid(s.t) && !isValid(s.a)) {
-        if (s.t !== 0) {
-            s.a = 2 * (s.x - s.x0 - s.v0 * s.t) / (s.t * s.t);
-            cambio = true;
-        }
-    } else if (isValid(s.x) && isValid(s.x0) && isValid(s.a) && isValid(s.t) && !isValid(s.v0)) {
-        if (s.t !== 0) {
-            s.v0 = (s.x - s.x0 - 0.5 * s.a * s.t * s.t) / s.t;
-            cambio = true;
-        }
-    } else if (isValid(s.x) && isValid(s.x0) && isValid(s.v0) && isValid(s.a) && !isValid(s.t)) {
-        const A = 0.5 * s.a;
-        const B = s.v0;
-        const C = s.x0 - s.x;
-        if (A === 0) {
-            if (B !== 0) {
-                s.t = -C / B;
-                cambio = true;
-            }
-        } else {
-            const disc = B * B - 4 * A * C;
-            if (disc >= 0) {
-                const t1 = (-B + Math.sqrt(disc)) / (2 * A);
-                const t2 = (-B - Math.sqrt(disc)) / (2 * A);
-                if (t1 >= 0 && t2 >= 0) {
-                    s.t = Math.min(t1, t2);
-                } else if (t1 >= 0) {
-                    s.t = t1;
-                } else if (t2 >= 0) {
-                    s.t = t2;
-                } else {
-                    s.t = null;
-                }
-                cambio = true;
-            }
-        }
-    }
-    return cambio;
+// ============================================
+// NAVEGACIÓN
+// ============================================
+
+function mostrarAprender() {
+    generarGridNumeros();
+    mostrarPantalla('pantalla-aprender');
 }
 
-function calcularEcuacion3() {
-    let cambio = false;
-    const s = state;
-    if (isValid(s.v0) && isValid(s.a) && isValid(s.dx) && !isValid(s.v)) {
-        const val = s.v0 * s.v0 + 2 * s.a * s.dx;
-        if (val >= 0) {
-            s.v = Math.sqrt(val);
-            if (s.v0 < 0 && s.a * s.dx < 0) s.v = -s.v;
-            cambio = true;
-        }
-    } else if (isValid(s.v) && isValid(s.a) && isValid(s.dx) && !isValid(s.v0)) {
-        const val = s.v * s.v - 2 * s.a * s.dx;
-        if (val >= 0) {
-            s.v0 = Math.sqrt(val);
-            if (s.v < 0 && s.a * s.dx > 0) s.v0 = -s.v0;
-            cambio = true;
-        }
-    } else if (isValid(s.v) && isValid(s.v0) && isValid(s.dx) && !isValid(s.a)) {
-        if (s.dx !== 0) {
-            s.a = (s.v * s.v - s.v0 * s.v0) / (2 * s.dx);
-            cambio = true;
-        }
-    } else if (isValid(s.v) && isValid(s.v0) && isValid(s.a) && !isValid(s.dx)) {
-        if (s.a !== 0) {
-            s.dx = (s.v * s.v - s.v0 * s.v0) / (2 * s.a);
-            cambio = true;
-        }
-    }
-    return cambio;
+function mostrarModos() {
+    mostrarPantalla('pantalla-modos');
 }
 
-function resolverIterativo() {
-    let iter = 0;
-    const MAX_ITER = 20;
-    while (iter < MAX_ITER) {
-        let cambio = false;
-        cambio = calcularRelacionDx() || cambio;
-        cambio = calcularEcuacion1() || cambio;
-        cambio = calcularEcuacion2() || cambio;
-        cambio = calcularEcuacion3() || cambio;
-        if (!cambio) break;
-        iter++;
-    }
-    return iter;
+function volverInicio() {
+    detenerTemporizador();
+    juegoActivo = false;
+    mostrarPantalla('pantalla-inicio');
 }
 
-function verificarConsistencia() {
-    const s = state;
-    if (isValid(s.x0) && isValid(s.x) && isValid(s.dx)) {
-        if (!approxEqual(s.dx, s.x - s.x0)) {
-            return `Inconsistencia: Δx (${fmt(s.dx)}) ≠ x - x₀ (${fmt(s.x)} - ${fmt(s.x0)} = ${fmt(s.x - s.x0)}). Verifica los datos.`;
-        }
-    }
-    if (isValid(s.v) && isValid(s.v0) && isValid(s.a) && isValid(s.t)) {
-        const vCalc = s.v0 + s.a * s.t;
-        if (!approxEqual(s.v, vCalc)) {
-            return `Inconsistencia: v (${fmt(s.v)}) ≠ v₀ + a·t (${fmt(s.v0)} + ${fmt(s.a)}·${fmt(s.t)} = ${fmt(vCalc)}). Datos incompatibles.`;
-        }
-    }
-    if (isValid(s.x) && isValid(s.x0) && isValid(s.v0) && isValid(s.a) && isValid(s.t)) {
-        const xCalc = s.x0 + s.v0 * s.t + 0.5 * s.a * s.t * s.t;
-        if (!approxEqual(s.x, xCalc)) {
-            return `Inconsistencia: x (${fmt(s.x)}) ≠ x₀ + v₀·t + ½·a·t². Datos incompatibles.`;
-        }
-    }
-    if (isValid(s.v) && isValid(s.v0) && isValid(s.a) && isValid(s.dx)) {
-        const lhs = s.v * s.v;
-        const rhs = s.v0 * s.v0 + 2 * s.a * s.dx;
-        if (!approxEqual(lhs, rhs)) {
-            return `Inconsistencia: v² (${fmt(lhs)}) ≠ v₀² + 2·a·Δx (${fmt(rhs)}). Datos incompatibles.`;
-        }
-    }
-    return null;
+function confirmarSalir() {
+    detenerTemporizador();
+    juegoActivo = false;
+    mostrarPantalla('pantalla-modos');
 }
 
-function variablesFaltantes() {
-    const s = state;
-    const conocidas = [];
-    if (isValid(s.x0)) conocidas.push('x₀');
-    if (isValid(s.x))  conocidas.push('x');
-    if (isValid(s.dx)) conocidas.push('Δx');
-    if (isValid(s.v0)) conocidas.push('v₀');
-    if (isValid(s.v))  conocidas.push('v');
-    if (isValid(s.a))  conocidas.push('a');
-    if (isValid(s.t))  conocidas.push('t');
+// ============================================
+// SECCIÓN: APRENDER LOS NÚMEROS
+// ============================================
 
-    if (conocidas.length < 3) {
-        return ['Se necesitan al menos 3 variables conocidas para resolver un problema de MRUV.'];
-    }
+function generarGridNumeros() {
+    const grid = document.getElementById('grid-numeros');
+    grid.innerHTML = '';
 
-    const sCopy = { ...s };
-    resolverIterativoConEstado(sCopy);
+    for (let i = 1; i <= 100; i++) {
+        const celda = document.createElement('div');
+        celda.className = 'celda-numero';
+        celda.textContent = i;
+        celda.setAttribute('role', 'button');
+        celda.setAttribute('aria-label', 'Número ' + i);
 
-    const vars = ['x0','x','dx','v0','v','a','t'];
-    const nombres = {'x0':'x₀','x':'x','dx':'Δx','v0':'v₀','v':'v','a':'a','t':'t'};
-    const faltan = [];
-    for (const v of vars) {
-        if (!isValid(sCopy[v])) {
-            faltan.push(nombres[v]);
-        }
-    }
-    return faltan;
-}
+        celda.addEventListener('click', () => seleccionarNumero(i, celda));
+        celda.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            seleccionarNumero(i, celda);
+        });
 
-function resolverIterativoConEstado(st) {
-    let iter = 0;
-    const MAX_ITER = 20;
-    const originalState = state;
-    state = st;
-    while (iter < MAX_ITER) {
-        let cambio = false;
-        cambio = calcularRelacionDx() || cambio;
-        cambio = calcularEcuacion1() || cambio;
-        cambio = calcularEcuacion2() || cambio;
-        cambio = calcularEcuacion3() || cambio;
-        if (!cambio) break;
-        iter++;
-    }
-    state = originalState;
-    return iter;
-}
-
-// ============================================================
-// 5. PROCEDIMIENTO MATEMÁTICO
-// ============================================================
-
-function generarProcedimiento() {
-    const s = state;
-    let html = '';
-    let paso = 1;
-
-    if (isValid(s.x0) && isValid(s.x) && isValid(s.dx)) {
-        html += pasoHTML(paso, 'Relación entre posiciones', 'Δx = x - x₀',
-            `Δx = ${fmt(s.x)} - ${fmt(s.x0)}`, `Δx = ${fmt(s.dx)} m`);
-        paso++;
-    }
-
-    if (isValid(s.v) && isValid(s.v0) && isValid(s.a) && isValid(s.t)) {
-        if (s.v === round(s.v0 + s.a * s.t, 3)) {
-            html += pasoHTML(paso, 'Ecuación de velocidad', 'v = v₀ + a·t',
-                `v = ${fmt(s.v0)} + (${fmt(s.a)})·(${fmt(s.t)})`, `v = ${fmt(s.v)} m/s`);
-            paso++;
-        }
-    }
-
-    if (isValid(s.x) && isValid(s.x0) && isValid(s.v0) && isValid(s.a) && isValid(s.t)) {
-        if (s.x === round(s.x0 + s.v0 * s.t + 0.5 * s.a * s.t * s.t, 3)) {
-            html += pasoHTML(paso, 'Ecuación de posición', 'x = x₀ + v₀·t + ½·a·t²',
-                `x = ${fmt(s.x0)} + (${fmt(s.v0)})·(${fmt(s.t)}) + ½·(${fmt(s.a)})·(${fmt(s.t)})²`,
-                `x = ${fmt(s.x)} m`);
-            paso++;
-        }
-    }
-
-    if (isValid(s.v) && isValid(s.v0) && isValid(s.a) && isValid(s.dx)) {
-        if (approxEqual(s.v * s.v, s.v0 * s.v0 + 2 * s.a * s.dx)) {
-            html += pasoHTML(paso, 'Ecuación independiente del tiempo', 'v² = v₀² + 2·a·Δx',
-                `(${fmt(s.v)})² = (${fmt(s.v0)})² + 2·(${fmt(s.a)})·(${fmt(s.dx)})`,
-                `v² = ${fmt(s.v * s.v)} → v = ${fmt(s.v)} m/s`);
-            paso++;
-        }
-    }
-
-    if (paso === 1) {
-        html += `<p class="eq-sub">Los valores fueron calculados mediante resolución iterativa de las ecuaciones cinemáticas del MRUV.</p>`;
-    }
-    return html;
-}
-
-function pasoHTML(n, nombre, formula, sustitucion, resultado) {
-    return `
-        <div class="proc-step">
-            <div class="eq-name">Paso ${n}: ${nombre}</div>
-            <div class="eq-formula">${formula}</div>
-            <div class="eq-sub">Sustitución: ${sustitucion}</div>
-            <div class="eq-res">Resultado: ${resultado}</div>
-        </div>`;
-}
-
-// ============================================================
-// 6. SIMULACIÓN VISUAL
-// ============================================================
-
-function dibujarFondoSim(ctx, width, height) {
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, width, height);
-
-    const roadY = height * 0.55;
-    const roadH = height * 0.35;
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(0, roadY, width, roadH);
-
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, roadY);
-    ctx.lineTo(width, roadY);
-    ctx.moveTo(0, roadY + roadH);
-    ctx.lineTo(width, roadY + roadH);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([20, 20]);
-    ctx.beginPath();
-    ctx.moveTo(0, roadY + roadH / 2);
-    ctx.lineTo(width, roadY + roadH / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    const escala = width / 300;
-    for (let m = 0; m <= 300; m += 50) {
-        const px = m * escala;
-        ctx.fillRect(px - 1, roadY + roadH, 2, 8);
-        ctx.fillText(m + ' m', px, roadY + roadH + 22);
+        grid.appendChild(celda);
     }
 }
 
-function dibujarVehiculo(ctx, xPixel, roadY, roadH, v) {
-    const carW = 50;
-    const carH = 22;
-    const carY = roadY + roadH / 2 - carH / 2;
+function seleccionarNumero(numero, elemento) {
+    // Quitar selección anterior
+    document.querySelectorAll('.celda-numero').forEach(c => c.classList.remove('seleccionado'));
 
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(xPixel + 4, carY + carH + 2, carW, 4);
+    // Seleccionar actual
+    elemento.classList.add('seleccionado');
 
-    ctx.fillStyle = v >= 0 ? '#3b82f6' : '#ef4444';
-    roundRect(ctx, xPixel, carY, carW, carH, 5);
-    ctx.fill();
+    // Mostrar en el panel destacado
+    const destacado = document.querySelector('.numero-grande');
+    const textoToca = document.querySelector('.texto-toca');
 
-    ctx.fillStyle = '#1e293b';
-    roundRect(ctx, xPixel + 28, carY + 3, 18, 10, 3);
-    ctx.fill();
+    destacado.textContent = numero;
+    textoToca.textContent = '¡Número ' + numero + '!';
 
-    ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.arc(xPixel + 10, carY + carH, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(xPixel + carW - 10, carY + carH, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(Math.abs(round(v, 1)) + ' m/s', xPixel + carW / 2, carY - 6);
+    // Pequeño efecto de sonido visual (vibración si está disponible)
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
 }
 
-function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
+// ============================================
+// SECCIÓN: JUEGO "¿QUÉ NÚMERO SIGUE?"
+// ============================================
+
+function iniciarJuego(modo) {
+    modoActual = modo;
+    tiempoLimite = modo === 'facil' ? 7 : 3;
+
+    // Reiniciar estadísticas
+    preguntaActual = 0;
+    puntos = 0;
+    correctas = 0;
+    incorrectas = 0;
+    sinResponder = 0;
+    juegoActivo = true;
+
+    // Actualizar UI
+    actualizarBarraSuperior();
+
+    mostrarPantalla('pantalla-juego');
+
+    // Pequeña pausa antes de la primera pregunta
+    setTimeout(() => {
+        siguientePregunta();
+    }, 500);
 }
 
-function iniciarSimulacion() {
-    if (simAnimationId) cancelAnimationFrame(simAnimationId);
-
-    const s = state;
-    if (!isValid(s.x0) || !isValid(s.v0) || !isValid(s.a)) {
-        showError('Para la simulación se requieren al menos x₀, v₀ y a.');
+function siguientePregunta() {
+    if (preguntaActual >= totalPreguntas) {
+        mostrarPantallaFinal();
         return;
     }
 
-    simRunning = true;
-    simTime = 0;
-    simSpeed = parseFloat(document.getElementById('simSpeed').value) || 1;
+    preguntaActual++;
+    puedeResponder = true;
 
-    let tTotal = isValid(s.t) && s.t > 0 ? s.t : 10;
-    if (tTotal <= 0) tTotal = 10;
+    // Generar número aleatorio entre 1 y 99
+    numeroMostrado = aleatorio(1, 99);
+    respuestaCorrecta = numeroMostrado + 1;
 
-    const width = simCanvas.width;
-    const height = simCanvas.height;
-    const escalaX = width / 300;
-    const startTime = performance.now();
+    // Generar opciones incorrectas
+    opcionesActuales = generarOpciones(numeroMostrado, respuestaCorrecta);
 
-    function frame(now) {
-        if (!simRunning) return;
-        const elapsedReal = (now - startTime) / 1000;
-        simTime = elapsedReal * simSpeed;
-        if (simTime > tTotal) {
-            simTime = tTotal;
-            simRunning = false;
-        }
-        const vSim = s.v0 + s.a * simTime;
-        const xSim = s.x0 + s.v0 * simTime + 0.5 * s.a * simTime * simTime;
-        dibujarFondoSim(simCtx, width, height);
-        const xPixel = (xSim - s.x0) * escalaX + 30;
-        const roadY = height * 0.55;
-        const roadH = height * 0.35;
-        dibujarVehiculo(simCtx, xPixel, roadY, roadH, vSim);
-        document.getElementById('sim-t').textContent = round(simTime, 2).toString();
-        document.getElementById('sim-x').textContent = round(xSim, 2).toString();
-        document.getElementById('sim-v').textContent = round(vSim, 2).toString();
-        document.getElementById('sim-a').textContent = round(s.a, 2).toString();
-        if (simRunning) {
-            simAnimationId = requestAnimationFrame(frame);
-        }
-    }
-    simAnimationId = requestAnimationFrame(frame);
+    // Mezclar opciones y recordar posición correcta
+    const opcionesMezcladas = mezclar(opcionesActuales);
+    posicionCorrecta = opcionesMezcladas.indexOf(respuestaCorrecta);
+
+    // Renderizar pregunta
+    renderizarPregunta(numeroMostrado, opcionesMezcladas);
+
+    // Actualizar barra superior
+    actualizarBarraSuperior();
+
+    // Iniciar temporizador
+    iniciarTemporizador();
 }
 
-function reiniciarSimulacion() {
-    simRunning = false;
-    if (simAnimationId) cancelAnimationFrame(simAnimationId);
-    simTime = 0;
-    const width = simCanvas.width;
-    const height = simCanvas.height;
-    dibujarFondoSim(simCtx, width, height);
-    const s = state;
-    const xPixel = isValid(s.x0) ? 30 : 30;
-    const roadY = height * 0.55;
-    const roadH = height * 0.35;
-    dibujarVehiculo(simCtx, xPixel, roadY, roadH, isValid(s.v0) ? s.v0 : 0);
-    document.getElementById('sim-t').textContent = '0.00';
-    document.getElementById('sim-x').textContent = fmt(s.x0);
-    document.getElementById('sim-v').textContent = fmt(s.v0);
-    document.getElementById('sim-a').textContent = fmt(s.a);
-}
+function generarOpciones(numero, correcta) {
+    let opciones = [correcta];
 
-// ============================================================
-// 7. GRÁFICAS
-// ============================================================
+    // Generar dos opciones incorrectas distintas entre sí y de la correcta
+    while (opciones.length < 3) {
+        let incorrecta;
 
-function dibujarGrafica(ctx, w, h, xs, ys, colorLinea, labelX, labelY, titulo) {
-    ctx.clearRect(0, 0, w, h);
-    const padL = 50, padR = 20, padT = 30, padB = 40;
-    const gw = w - padL - padR;
-    const gh = h - padT - padB;
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, w, h);
+        // Estrategia: variar entre -3 a +3 del número mostrado, evitando la correcta
+        const offset = aleatorio(-3, 3);
+        incorrecta = numero + offset;
 
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const rangeY = maxY - minY || 1;
-    const y0 = minY - rangeY * 0.1;
-    const y1 = maxY + rangeY * 0.1;
-    const x0 = minX;
-    const x1 = maxX;
+        // Asegurar que esté en rango 1-100 y sea distinta
+        if (incorrecta < 1) incorrecta = aleatorio(1, numero - 1);
+        if (incorrecta > 100) incorrecta = aleatorio(numero + 2, 100);
+        if (incorrecta === correcta) incorrecta = correcta + aleatorio(2, 4);
+        if (incorrecta > 100) incorrecta = correcta - aleatorio(2, 4);
+        if (incorrecta < 1) incorrecta = 1;
 
-    const sx = (x) => padL + ((x - x0) / (x1 - x0)) * gw;
-    const sy = (y) => padT + gh - ((y - y0) / (y1 - y0)) * gh;
-
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let i = 0; i <= 5; i++) {
-        const x = padL + (gw / 5) * i;
-        ctx.moveTo(x, padT);
-        ctx.lineTo(x, padT + gh);
-    }
-    for (let i = 0; i <= 5; i++) {
-        const y = padT + (gh / 5) * i;
-        ctx.moveTo(padL, y);
-        ctx.lineTo(padL + gw, y);
-    }
-    ctx.stroke();
-
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(padL, padT);
-    ctx.lineTo(padL, padT + gh);
-    ctx.lineTo(padL + gw, padT + gh);
-    ctx.stroke();
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(labelX, padL + gw / 2, h - 6);
-    ctx.save();
-    ctx.translate(12, padT + gh / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(labelY, 0, 0);
-    ctx.restore();
-
-    ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    for (let i = 0; i <= 5; i++) {
-        const val = x0 + ((x1 - x0) / 5) * i;
-        ctx.fillText(round(val, 2).toString(), padL + (gw / 5) * i, padT + gh + 14);
-    }
-    ctx.textAlign = 'right';
-    for (let i = 0; i <= 5; i++) {
-        const val = y0 + ((y1 - y0) / 5) * i;
-        ctx.fillText(round(val, 2).toString(), padL - 6, padT + gh - (gh / 5) * i + 4);
-    }
-
-    if (xs.length > 1) {
-        ctx.strokeStyle = colorLinea;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(sx(xs[0]), sy(ys[0]));
-        for (let i = 1; i < xs.length; i++) {
-            ctx.lineTo(sx(xs[i]), sy(ys[i]));
-        }
-        ctx.stroke();
-        ctx.fillStyle = colorLinea;
-        for (let i = 0; i < xs.length; i += Math.max(1, Math.floor(xs.length / 20))) {
-            ctx.beginPath();
-            ctx.arc(sx(xs[i]), sy(ys[i]), 3, 0, Math.PI * 2);
-            ctx.fill();
+        // Verificar que no esté repetida
+        if (!opciones.includes(incorrecta)) {
+            opciones.push(incorrecta);
         }
     }
+
+    return opciones;
 }
 
-function generarGraficas() {
-    const s = state;
-    if (!isValid(s.x0) || !isValid(s.v0) || !isValid(s.a)) {
-        dibujarGraficaVacia(graphPosCtx, graphPosCanvas.width, graphPosCanvas.height, 'Posición vs Tiempo', 't (s)', 'x (m)');
-        dibujarGraficaVacia(graphVelCtx, graphVelCanvas.width, graphVelCanvas.height, 'Velocidad vs Tiempo', 't (s)', 'v (m/s)');
-        dibujarGraficaVacia(graphAccCtx, graphAccCanvas.width, graphAccCanvas.height, 'Aceleración vs Tiempo', 't (s)', 'a (m/s²)');
-        return;
+function renderizarPregunta(numero, opciones) {
+    const numeroEl = document.getElementById('numero-pregunta');
+    numeroEl.textContent = numero;
+
+    // Animación de entrada
+    numeroEl.style.animation = 'none';
+    numeroEl.offsetHeight; // Trigger reflow
+    numeroEl.style.animation = 'popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+    // Renderizar opciones
+    for (let i = 0; i < 3; i++) {
+        const btn = document.getElementById('opcion-' + i);
+        const burbuja = btn.querySelector('.burbuja-numero');
+
+        burbuja.textContent = opciones[i];
+        btn.disabled = false;
+        btn.classList.remove('correcto', 'incorrecto', 'revelado');
+        btn.style.opacity = '1';
     }
-    const tTotal = isValid(s.t) && s.t > 0 ? s.t : 10;
-    const nPoints = 100;
-    const ts = [], xs = [], vs = [], as = [];
-    for (let i = 0; i <= nPoints; i++) {
-        const t = (tTotal / nPoints) * i;
-        ts.push(t);
-        xs.push(s.x0 + s.v0 * t + 0.5 * s.a * t * t);
-        vs.push(s.v0 + s.a * t);
-        as.push(s.a);
-    }
-    dibujarGrafica(graphPosCtx, graphPosCanvas.width, graphPosCanvas.height, ts, xs, '#1a56db', 't (s)', 'x (m)', 'Posición vs Tiempo');
-    dibujarGrafica(graphVelCtx, graphVelCanvas.width, graphVelCanvas.height, ts, vs, '#047857', 't (s)', 'v (m/s)', 'Velocidad vs Tiempo');
-    dibujarGrafica(graphAccCtx, graphAccCanvas.width, graphAccCanvas.height, ts, as, '#dc2626', 't (s)', 'a (m/s²)', 'Aceleración vs Tiempo');
+
+    // Ocultar feedback
+    document.getElementById('feedback').classList.add('oculto');
 }
 
-function dibujarGraficaVacia(ctx, w, h, titulo, lx, ly) {
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Ingrese x₀, v₀ y a para generar la gráfica', w / 2, h / 2);
+// ============================================
+// TEMPORIZADOR
+// ============================================
+
+function iniciarTemporizador() {
+    detenerTemporizador();
+
+    tiempoRestante = tiempoLimite;
+    actualizarCirculoTemporizador(1);
+
+    const textoTiempo = document.getElementById('tiempo-restante');
+    textoTiempo.textContent = tiempoRestante;
+
+    const circulo = document.getElementById('circulo-progreso');
+    circulo.classList.remove('urgente');
+
+    temporizadorInterval = setInterval(() => {
+        tiempoRestante -= 0.1;
+
+        // Actualizar texto
+        textoTiempo.textContent = Math.ceil(tiempoRestante);
+
+        // Actualizar círculo
+        const progreso = tiempoRestante / tiempoLimite;
+        actualizarCirculoTemporizador(progreso);
+
+        // Cambiar color cuando queda poco tiempo
+        if (tiempoRestante <= 2) {
+            circulo.classList.add('urgente');
+        }
+
+        if (tiempoRestante <= 0) {
+            detenerTemporizador();
+            tiempoAgotado();
+        }
+    }, 100);
 }
 
-// ============================================================
-// 8. GENERADOR DE EJEMPLOS ALEATORIOS
-// ============================================================
-
-function generarEjemploAleatorio() {
-    resetearTodo();
-    const x0 = 0;
-    const v0 = round(Math.random() * 15 + 2, 1);
-    const a  = round((Math.random() > 0.3 ? 1 : -1) * (Math.random() * 4 + 0.5), 2);
-    const t  = round(Math.random() * 8 + 3, 1);
-    const v  = round(v0 + a * t, 2);
-    const x  = round(x0 + v0 * t + 0.5 * a * t * t, 2);
-    const dx = round(x - x0, 2);
-
-    const vars = ['x0','x','dx','v0','v','a','t'];
-    const valores = { x0, x, dx, v0, v, a, t };
-    const numMostrar = Math.floor(Math.random() * 3) + 3;
-    const shuffled = vars.sort(() => Math.random() - 0.5);
-    const mostrar = shuffled.slice(0, numMostrar);
-
-    for (const v of mostrar) {
-        inputs[v].value = valores[v];
+function detenerTemporizador() {
+    if (temporizadorInterval) {
+        clearInterval(temporizadorInterval);
+        temporizadorInterval = null;
     }
-    showInfo('Ejemplo aleatorio generado. Calcula las variables faltantes y presiona "Calcular".');
 }
 
-// ============================================================
-// 9. EVENTOS Y CONTROLADORES
-// ============================================================
+function actualizarCirculoTemporizador(progreso) {
+    const circulo = document.getElementById('circulo-progreso');
+    const offset = CIRCUNFERENCIA * (1 - progreso);
+    circulo.style.strokeDashoffset = offset;
+}
 
-function handleCalcular() {
-    clearMessages();
-    readStateFromInputs();
+// ============================================
+// RESPUESTAS
+// ============================================
 
-    const conocidas = Object.values(state).filter(v => isValid(v)).length;
-    if (conocidas < 3) {
-        showError('Se necesitan al menos 3 variables conocidas para resolver el MRUV. Ingresa más datos.');
-        showResults(false);
-        showProcedure(false);
-        return;
-    }
+function responder(indice) {
+    if (!puedeResponder || !juegoActivo) return;
 
-    const inconsistencia = verificarConsistencia();
-    if (inconsistencia) {
-        showError(inconsistencia);
-        showResults(false);
-        showProcedure(false);
-        return;
-    }
+    puedeResponder = false;
+    detenerTemporizador();
 
-    resolverIterativo();
+    const esCorrecta = indice === posicionCorrecta;
 
-    const faltan = variablesFaltantes();
-    if (faltan.length > 0 && typeof faltan[0] === 'string' && faltan[0].startsWith('Se necesitan')) {
-        showError(faltan[0]);
-        showResults(false);
-        showProcedure(false);
-        return;
-    }
-
-    const postInconsistencia = verificarConsistencia();
-    if (postInconsistencia) {
-        showError(postInconsistencia);
-        showResults(false);
-        showProcedure(false);
-        return;
-    }
-
-    writeResults();
-    showResults(true);
-    procContent.innerHTML = generarProcedimiento();
-    showProcedure(true);
-    generarGraficas();
-    reiniciarSimulacion();
-
-    if (faltan.length > 0) {
-        showInfo(`Cálculo completado. No fue posible determinar: ${faltan.join(', ')} con los datos proporcionados.`);
+    if (esCorrecta) {
+        correctas++;
+        puntos += (modoActual === 'dificil' ? 2 : 1);
+        mostrarFeedbackCorrecto();
+        resaltarBoton(indice, 'correcto');
+        lanzarConfeti();
     } else {
-        showInfo('¡Cálculo completado! Todas las variables fueron determinadas.');
+        incorrectas++;
+        mostrarFeedbackIncorrecto();
+        resaltarBoton(indice, 'incorrecto');
+        resaltarBoton(posicionCorrecta, 'revelado');
+    }
+
+    actualizarBarraSuperior();
+
+    // Pasar a siguiente pregunta después de un intervalo
+    setTimeout(() => {
+        siguientePregunta();
+    }, 2000);
+}
+
+function tiempoAgotado() {
+    if (!juegoActivo) return;
+
+    puedeResponder = false;
+    sinResponder++;
+
+    mostrarFeedbackTiempoAgotado();
+    resaltarBoton(posicionCorrecta, 'revelado');
+
+    actualizarBarraSuperior();
+
+    setTimeout(() => {
+        siguientePregunta();
+    }, 2500);
+}
+
+function resaltarBoton(indice, clase) {
+    const btn = document.getElementById('opcion-' + indice);
+    btn.classList.add(clase);
+    btn.disabled = true;
+}
+
+// ============================================
+// FEEDBACK
+// ============================================
+
+function mostrarFeedbackCorrecto() {
+    const feedback = document.getElementById('feedback');
+    const icono = document.getElementById('feedback-icono');
+    const texto = document.getElementById('feedback-texto');
+    const secuencia = document.getElementById('secuencia-visual');
+
+    const mensajes = [
+        '¡Correcto! ¡Muy bien!',
+        '¡Excelente! ¡Lo lograste!',
+        '¡Bravo! ¡Eres genial!',
+        '¡Perfecto! ¡Sigue así!',
+        '¡Increíble! ¡Eres muy listo!'
+    ];
+
+    icono.textContent = '🎉';
+    texto.textContent = mensajes[aleatorio(0, mensajes.length - 1)];
+    texto.style.color = '#43e97b';
+    secuencia.classList.add('oculto');
+
+    feedback.classList.remove('oculto');
+}
+
+function mostrarFeedbackIncorrecto() {
+    const feedback = document.getElementById('feedback');
+    const icono = document.getElementById('feedback-icono');
+    const texto = document.getElementById('feedback-texto');
+    const secuencia = document.getElementById('secuencia-visual');
+    const secAntes = document.getElementById('sec-antes');
+    const secDespues = document.getElementById('sec-despues');
+
+    icono.textContent = '😊';
+    texto.textContent = '¡Casi! La respuesta era ' + respuestaCorrecta;
+    texto.style.color = '#FF6B6B';
+
+    // Mostrar secuencia visual pedagógica
+    secAntes.textContent = numeroMostrado;
+    secDespues.textContent = respuestaCorrecta;
+    secuencia.classList.remove('oculto');
+
+    feedback.classList.remove('oculto');
+}
+
+function mostrarFeedbackTiempoAgotado() {
+    const feedback = document.getElementById('feedback');
+    const icono = document.getElementById('feedback-icono');
+    const texto = document.getElementById('feedback-texto');
+    const secuencia = document.getElementById('secuencia-visual');
+    const secAntes = document.getElementById('sec-antes');
+    const secDespues = document.getElementById('sec-despues');
+
+    icono.textContent = '⏰';
+    texto.textContent = '¡Se acabó el tiempo! Era el ' + respuestaCorrecta;
+    texto.style.color = '#FF6B6B';
+
+    secAntes.textContent = numeroMostrado;
+    secDespues.textContent = respuestaCorrecta;
+    secuencia.classList.remove('oculto');
+
+    feedback.classList.remove('oculto');
+}
+
+// ============================================
+// BARRA SUPERIOR
+// ============================================
+
+function actualizarBarraSuperior() {
+    document.getElementById('puntos').textContent = puntos;
+    document.getElementById('num-pregunta').textContent = preguntaActual;
+}
+
+// ============================================
+// PANTALLA FINAL
+// ============================================
+
+function mostrarPantallaFinal() {
+    juegoActivo = false;
+
+    const totalRespondidas = correctas + incorrectas;
+    const porcentaje = totalRespondidas > 0 
+        ? Math.round((correctas / totalRespondidas) * 100) 
+        : 0;
+
+    // Estadísticas
+    document.getElementById('stat-correctas').textContent = correctas;
+    document.getElementById('stat-incorrectas').textContent = incorrectas;
+    document.getElementById('stat-sin-responder').textContent = sinResponder;
+    document.getElementById('stat-porcentaje').textContent = porcentaje + '%';
+
+    // Mensaje según rendimiento
+    const tituloFinal = document.getElementById('titulo-final');
+    const mensajeFinal = document.getElementById('mensaje-final');
+    const trofeo = document.getElementById('trofeo');
+
+    if (porcentaje >= 90) {
+        tituloFinal.textContent = '¡Excelente!';
+        mensajeFinal.textContent = '¡Ya conoces muy bien los números!';
+        trofeo.textContent = '🏆';
+        lanzarConfeti();
+    } else if (porcentaje >= 70) {
+        tituloFinal.textContent = '¡Muy bien!';
+        mensajeFinal.textContent = 'Estás aprendiendo muchísimo.';
+        trofeo.textContent = '🥇';
+    } else if (porcentaje >= 50) {
+        tituloFinal.textContent = '¡Buen trabajo!';
+        mensajeFinal.textContent = 'Sigue practicando, ¡lo estás haciendo genial!';
+        trofeo.textContent = '🥈';
+    } else {
+        tituloFinal.textContent = '¡No te preocupes!';
+        mensajeFinal.textContent = 'Practiquemos un poquito más. ¡Tú puedes!';
+        trofeo.textContent = '🌟';
+    }
+
+    mostrarPantalla('pantalla-final');
+}
+
+// ============================================
+// CONFETI
+// ============================================
+
+function lanzarConfeti() {
+    const colores = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3'];
+    const container = document.getElementById('confeti-container');
+
+    for (let i = 0; i < 40; i++) {
+        const confeti = document.createElement('div');
+        confeti.className = 'confeti';
+        confeti.style.left = aleatorio(0, 100) + '%';
+        confeti.style.backgroundColor = colores[aleatorio(0, colores.length - 1)];
+        confeti.style.animationDelay = (aleatorio(0, 500) / 1000) + 's';
+        confeti.style.animationDuration = (aleatorio(15, 25) / 10) + 's';
+
+        // Formas variadas
+        const forma = aleatorio(0, 2);
+        if (forma === 0) {
+            confeti.style.borderRadius = '50%';
+        } else if (forma === 1) {
+            confeti.style.borderRadius = '0';
+            confeti.style.transform = 'rotate(45deg)';
+        }
+
+        container.appendChild(confeti);
+
+        // Limpiar después de la animación
+        setTimeout(() => {
+            if (confeti.parentNode) {
+                confeti.parentNode.removeChild(confeti);
+            }
+        }, 3000);
     }
 }
 
-function resetearTodo() {
-    for (const key in inputs) {
-        inputs[key].value = '';
-    }
-    state = { x0: null, x: null, dx: null, v0: null, v: null, a: null, t: null };
-    showResults(false);
-    showProcedure(false);
-    clearMessages();
-    reiniciarSimulacion();
-    generarGraficas();
-}
-
-// ============================================================
-// 10. INICIALIZACIÓN
-// ============================================================
+// ============================================
+// INICIALIZACIÓN
+// ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnCalcular').addEventListener('click', handleCalcular);
-    document.getElementById('btnReset').addEventListener('click', resetearTodo);
-    document.getElementById('btnEjemplo').addEventListener('click', generarEjemploAleatorio);
-    document.getElementById('btnSimPlay').addEventListener('click', iniciarSimulacion);
-    document.getElementById('btnSimReset').addEventListener('click', reiniciarSimulacion);
+    // Mostrar pantalla de inicio
+    mostrarPantalla('pantalla-inicio');
 
-    dibujarFondoSim(simCtx, simCanvas.width, simCanvas.height);
-    dibujarVehiculo(simCtx, 30, simCanvas.height * 0.55, simCanvas.height * 0.35, 0);
-    generarGraficas();
+    // Prevenir zoom en doble tap en móviles
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
 });
