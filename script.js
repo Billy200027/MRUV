@@ -1,3 +1,11 @@
+/* ============================================
+   APRENDAMOS LOS NÚMEROS - LÓGICA DEL JUEGO
+   Para niños de 4 a 6 años
+   ============================================ */
+
+// ============================================
+// VARIABLES GLOBALES
+// ============================================
 let modoActual = 'facil';
 let tiempoLimite = 7; // segundos
 let tiempoRestante = 7;
