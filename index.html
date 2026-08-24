@@ -3,197 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MRUV - Calculadora y Simulador</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>¡Mas vale que aprendas los numeros Caleb! >:3</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- ==================== ENCABEZADO ==================== -->
-    <header class="header">
-        <div class="container">
-            <h1>Movimiento Rectilíneo Uniformemente Variado (MRUV)</h1>
-            <p class="subtitle">
-                El MRUV es un modelo cinemático en el que un cuerpo se desplaza 
-                a lo largo de una trayectoria recta con <strong>aceleración constante</strong>. 
-                Esta aplicación permite calcular, simular y visualizar cualquier problema de MRUV 
-                de manera interactiva.
-            </p>
+    <!-- Pantalla de inicio -->
+    <div id="pantalla-inicio" class="pantalla activa">
+        <div class="contenedor-inicio">
+            <div class="mascota">Black Piguave🐺</div>
+            <h1 class="titulo-principal">¡Mas vale que aprendas los numeros Caleb! >:3</h1>
+            <p class="subtitulo">Agradece que solo seran del 1 al 100</p>
+            <div class="botones-inicio">
+                <button class="btn-grande btn-aprender" onclick="mostrarAprender()">
+                    <span class="icono">📚</span>
+                    <span class="texto-btn">Aprende los numeros en bloque</span>
+                </button>
+                <button class="btn-grande btn-jugar" onclick="mostrarModos()">
+                    <span class="icono">🎮</span>
+                    <span class="texto-btn">A que no te atreves</span>
+                </button>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <main class="container">
-        <!-- ==================== CALCULADORA ==================== -->
-        <section class="card calculator-card">
-            <h2>Calculadora Inteligente de MRUV</h2>
-            <p class="hint">Ingresa los datos conocidos. Deja vacíos los campos que deseas calcular.</p>
-
-            <div class="form-grid">
-                <div class="input-group">
-                    <label for="x0">Posición inicial (x₀)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="x0" step="any" placeholder="Ej: 0">
-                        <span class="unit">m</span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="x">Posición final (x)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="x" step="any" placeholder="Ej: 100">
-                        <span class="unit">m</span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="dx">Desplazamiento (Δx)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="dx" step="any" placeholder="Ej: 100">
-                        <span class="unit">m</span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="v0">Velocidad inicial (v₀)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="v0" step="any" placeholder="Ej: 5">
-                        <span class="unit">m/s</span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="v">Velocidad final (v)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="v" step="any" placeholder="Ej: 25">
-                        <span class="unit">m/s</span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="a">Aceleración (a)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="a" step="any" placeholder="Ej: 2">
-                        <span class="unit">m/s²</span>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="t">Tiempo (t)</label>
-                    <div class="input-wrapper">
-                        <input type="number" id="t" step="any" placeholder="Ej: 10">
-                        <span class="unit">s</span>
-                    </div>
-                </div>
+    <!-- Pantalla de selección de modo -->
+    <div id="pantalla-modos" class="pantalla">
+        <div class="contenedor-modos">
+            <button class="btn-volver" onclick="volverInicio()">← Volver</button>
+            <h2 class="titulo-seccion">¿Elije Facil o muy facil?</h2>
+            <div class="botones-modo">
+                <button class="btn-modo btn-facil" onclick="iniciarJuego('facil')">
+                    <span class="modo-icono">🌟</span>
+                    <span class="modo-titulo">Modo Fácil</span>
+                    <span class="modo-desc">7 segundos por pregunta</span>
+                </button>
+                <button class="btn-modo btn-dificil" onclick="iniciarJuego('dificil')">
+                    <span class="modo-icono">🚀</span>
+                    <span class="modo-titulo">Modo Difícil</span>
+                    <span class="modo-desc">3 segundos por pregunta</span>
+                </button>
             </div>
-
-            <div class="btn-group">
-                <button id="btnCalcular" class="btn btn-primary">▶ Calcular</button>
-                <button id="btnReset" class="btn btn-secondary">↺ Restablecer</button>
-                <button id="btnEjemplo" class="btn btn-accent">🎲 Generar ejemplo aleatorio</button>
-            </div>
-
-            <div id="mensajeError" class="mensaje error"></div>
-            <div id="mensajeInfo" class="mensaje info"></div>
-        </section>
-
-        <!-- ==================== RESULTADOS ==================== -->
-        <section id="resultados" class="card results-card hidden">
-            <h2>Resultados</h2>
-            <div class="results-grid">
-                <div class="result-item"><span class="res-label">x₀</span><span class="res-val" id="res-x0">—</span><span class="res-unit">m</span></div>
-                <div class="result-item"><span class="res-label">x</span><span class="res-val" id="res-x">—</span><span class="res-unit">m</span></div>
-                <div class="result-item"><span class="res-label">Δx</span><span class="res-val" id="res-dx">—</span><span class="res-unit">m</span></div>
-                <div class="result-item"><span class="res-label">v₀</span><span class="res-val" id="res-v0">—</span><span class="res-unit">m/s</span></div>
-                <div class="result-item"><span class="res-label">v</span><span class="res-val" id="res-v">—</span><span class="res-unit">m/s</span></div>
-                <div class="result-item"><span class="res-label">a</span><span class="res-val" id="res-a">—</span><span class="res-unit">m/s²</span></div>
-                <div class="result-item"><span class="res-label">t</span><span class="res-val" id="res-t">—</span><span class="res-unit">s</span></div>
-            </div>
-        </section>
-
-        <!-- ==================== PROCEDIMIENTO ==================== -->
-        <section id="procedimiento" class="card proc-card hidden">
-            <h2>Procedimiento Matemático</h2>
-            <div id="procContent"></div>
-        </section>
-
-        <!-- ==================== SIMULACIÓN ==================== -->
-        <section class="card sim-card">
-            <h2>Simulación Visual</h2>
-            <div class="sim-controls">
-                <button id="btnSimPlay" class="btn btn-primary">▶ Iniciar simulación</button>
-                <button id="btnSimReset" class="btn btn-secondary">↺ Reiniciar</button>
-                <div class="sim-speed">
-                    <label for="simSpeed">Velocidad:</label>
-                    <input type="range" id="simSpeed" min="0.2" max="3" step="0.1" value="1">
-                </div>
-            </div>
-            <canvas id="simCanvas" width="900" height="220"></canvas>
-            <div class="sim-status" id="simStatus">
-                <span>t = <strong id="sim-t">0.00</strong> s</span>
-                <span>x = <strong id="sim-x">0.00</strong> m</span>
-                <span>v = <strong id="sim-v">0.00</strong> m/s</span>
-                <span>a = <strong id="sim-a">0.00</strong> m/s²</span>
-            </div>
-        </section>
-
-        <!-- ==================== GRÁFICAS ==================== -->
-        <section class="card graphs-card">
-            <h2>Gráficas Cinemáticas</h2>
-            <div class="graphs-grid">
-                <div class="graph-box">
-                    <h3>Posición vs Tiempo</h3>
-                    <canvas id="graphPos" width="420" height="280"></canvas>
-                </div>
-                <div class="graph-box">
-                    <h3>Velocidad vs Tiempo</h3>
-                    <canvas id="graphVel" width="420" height="280"></canvas>
-                </div>
-                <div class="graph-box">
-                    <h3>Aceleración vs Tiempo</h3>
-                    <canvas id="graphAcc" width="420" height="280"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <!-- ==================== CONCEPTOS ==================== -->
-        <section class="card concepts-card">
-            <h2>Conceptos Importantes</h2>
-            <div class="concepts-grid">
-                <div class="concept-item">
-                    <div class="concept-icon">📐</div>
-                    <p>En el MRUV la <strong>aceleración es constante</strong> en magnitud, dirección y sentido.</p>
-                </div>
-                <div class="concept-item">
-                    <div class="concept-icon">📈</div>
-                    <p>La <strong>pendiente</strong> de la gráfica velocidad-tiempo representa la <strong>aceleración</strong>.</p>
-                </div>
-                <div class="concept-item">
-                    <div class="concept-icon">📊</div>
-                    <p>El <strong>área bajo</strong> la gráfica velocidad-tiempo representa el <strong>desplazamiento</strong>.</p>
-                </div>
-                <div class="concept-item">
-                    <div class="concept-icon">🔍</div>
-                    <p>La <strong>pendiente</strong> de la gráfica posición-tiempo representa la <strong>velocidad instantánea</strong>.</p>
-                </div>
-                <div class="concept-item">
-                    <div class="concept-icon">⬆️</div>
-                    <p>Una aceleración <strong>positiva</strong> incrementa la rapidez en el sentido del movimiento.</p>
-                </div>
-                <div class="concept-item">
-                    <div class="concept-icon">⬇️</div>
-                    <p>Una aceleración <strong>negativa</strong> disminuye la rapidez (frenado) o la invierte.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- ==================== MATERIAL DE APOYO ==================== -->
-        <section class="card support-card">
-            <h2>Material de Apoyo</h2>
-            <div class="support-buttons">
-                <a href="documento.pdf" class="btn btn-large btn-doc" download>📄 Descargar documento PDF</a>
-                <a href="diapositivas.pdf" class="btn btn-large btn-slide" download>📑 Descargar diapositivas PDF</a>
-            </div>
-            <p class="support-note">Los archivos PDF contienen la teoría completa, ejemplos resueltos y ejercicios propuestos sobre MRUV.</p>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <p>Recurso didáctico universitario — MRUV</p>
         </div>
-    </footer>
+    </div>
+
+    <!-- Pantalla de aprender números -->
+    <div id="pantalla-aprender" class="pantalla">
+        <div class="contenedor-aprender">
+            <button class="btn-volver" onclick="volverInicio()">← Volver al inicio</button>
+            <h2 class="titulo-seccion">¡Aprendamos los números del 1 al 100!</h2>
+            <div id="numero-destacado" class="numero-destacado">
+                <span class="numero-grande">?</span>
+                <span class="texto-toca">Toca un número</span>
+            </div>
+            <div id="grid-numeros" class="grid-numeros"></div>
+        </div>
+    </div>
+
+    <!-- Pantalla del juego -->
+    <div id="pantalla-juego" class="pantalla">
+        <div class="contenedor-juego">
+            <!-- Barra superior con info -->
+            <div class="barra-superior">
+                <button class="btn-volver-chico" onclick="confirmarSalir()">✕</button>
+                <div class="info-juego">
+                    <span class="info-puntos">⭐ <span id="puntos">0</span></span>
+                    <span class="info-pregunta">Pregunta <span id="num-pregunta">1</span> de 10</span>
+                </div>
+            </div>
+
+            <!-- Temporizador visual -->
+            <div class="contenedor-temporizador">
+                <div class="temporizador-circular">
+                    <svg viewBox="0 0 100 100">
+                        <circle class="fondo-circulo" cx="50" cy="50" r="45"/>
+                        <circle id="circulo-progreso" class="progreso-circulo" cx="50" cy="50" r="45"/>
+                    </svg>
+                    <span id="tiempo-restante" class="tiempo-texto">7</span>
+                </div>
+            </div>
+
+            <!-- Pregunta -->
+            <div class="pregunta-area">
+                <p class="pregunta-texto">¿Qué número sigue?</p>
+                <div id="numero-pregunta" class="numero-pregunta">?</div>
+            </div>
+
+            <!-- Opciones de respuesta -->
+            <div id="opciones" class="opciones">
+                <button class="btn-opcion" id="opcion-0" onclick="responder(0)">
+                    <span class="burbuja-numero">?</span>
+                </button>
+                <button class="btn-opcion" id="opcion-1" onclick="responder(1)">
+                    <span class="burbuja-numero">?</span>
+                </button>
+                <button class="btn-opcion" id="opcion-2" onclick="responder(2)">
+                    <span class="burbuja-numero">?</span>
+                </button>
+            </div>
+
+            <!-- Feedback -->
+            <div id="feedback" class="feedback oculto">
+                <div class="feedback-contenido">
+                    <span id="feedback-icono" class="feedback-icono">🎉</span>
+                    <p id="feedback-texto" class="feedback-texto">¡Correcto!</p>
+                    <div id="secuencia-visual" class="secuencia-visual oculto">
+                        <span class="sec-num" id="sec-antes"></span>
+                        <span class="sec-flecha">→</span>
+                        <span class="sec-num" id="sec-despues"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla final -->
+    <div id="pantalla-final" class="pantalla">
+        <div class="contenedor-final">
+            <div class="trofeo" id="trofeo">🏆</div>
+            <h2 id="titulo-final" class="titulo-final">¡Terminaste!</h2>
+            <p id="mensaje-final" class="mensaje-final">¡Muy bien hecho!</p>
+
+            <div class="estadisticas">
+                <div class="stat">
+                    <span class="stat-icono">✅</span>
+                    <span class="stat-valor" id="stat-correctas">0</span>
+                    <span class="stat-label">Correctas</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icono">❌</span>
+                    <span class="stat-valor" id="stat-incorrectas">0</span>
+                    <span class="stat-label">Incorrectas</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-icono">⏱️</span>
+                    <span class="stat-valor" id="stat-sin-responder">0</span>
+                    <span class="stat-label">Sin responder</span>
+                </div>
+                <div class="stat stat-grande">
+                    <span class="stat-icono">🎯</span>
+                    <span class="stat-valor" id="stat-porcentaje">0%</span>
+                    <span class="stat-label">Aciertos</span>
+                </div>
+            </div>
+
+            <div class="botones-final">
+                <button class="btn-grande btn-reiniciar" onclick="mostrarModos()">
+                    <span class="icono">🔄</span>
+                    <span class="texto-btn">Jugar otra vez</span>
+                </button>
+                <button class="btn-grande btn-inicio" onclick="volverInicio()">
+                    <span class="icono">🏠</span>
+                    <span class="texto-btn">Volver al inicio</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confeti container -->
+    <div id="confeti-container"></div>
 
     <script src="script.js"></script>
 </body>
