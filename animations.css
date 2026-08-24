@@ -1,0 +1,114 @@
+
+/* Entrada suave de pantallas */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Rebote del husky */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+/* Pestañeo del husky */
+@keyframes huskyBlink {
+    0%, 90%, 100% { opacity: 1; transform: scaleY(1); }
+    95% { opacity: 0.6; transform: scaleY(0.1); }
+}
+
+/* Movimiento de cola del husky */
+@keyframes huskyWag {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+}
+
+/* Aparición con rebote */
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Pulso al seleccionar número */
+@keyframes pulse {
+    0% { transform: scale(1.2); }
+    50% { transform: scale(1.35); }
+    100% { transform: scale(1.2); }
+}
+
+/* Animación de respuesta correcta */
+@keyframes correctoAnim {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Animación de respuesta incorrecta (shake) */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-10px); }
+    80% { transform: translateX(10px); }
+}
+
+/* Caída de confeti */
+@keyframes confetiCaida {
+    0% {
+        transform: translateY(-20px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Flotación suave */
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-8px) rotate(2deg); }
+    66% { transform: translateY(-4px) rotate(-2deg); }
+}
+
+/* Brillo alrededor del número destacado */
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(91, 141, 239, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(91, 141, 239, 0.6); }
+}
+
+/* Rotación lenta decorativa */
+@keyframes slowRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Escala al hacer hover en botones de incremento */
+@keyframes hoverPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Desvanecimiento del feedback */
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Aparición desde abajo */
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Latido del corazón / éxito */
+@keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    14% { transform: scale(1.15); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.15); }
+    70% { transform: scale(1); }
+}
+
+
