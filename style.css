@@ -1,3 +1,8 @@
+/* ============================================
+   APRENDAMOS LOS NÚMEROS - ESTILOS
+   Paleta de colores FRÍA para niños de 4 a 6 años
+   ============================================ */
+
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -811,82 +816,82 @@ body {
     .titulo-principal {
         font-size: 1.8rem;
     }
-    
+
     .subtitulo {
         font-size: 1.2rem;
     }
-    
+
     .mascota {
         font-size: 4rem;
     }
-    
+
     .btn-grande {
         padding: 1.2rem 1.5rem;
         font-size: 1.1rem;
     }
-    
+
     .texto-btn {
         font-size: 1.1rem;
     }
-    
+
     .numero-pregunta {
         font-size: 4.5rem;
     }
-    
+
     .burbuja-numero {
         font-size: 2rem;
     }
-    
+
     .grid-numeros {
         grid-template-columns: repeat(10, 1fr);
         gap: 0.3rem;
     }
-    
+
     .celda-numero {
         font-size: 0.85rem;
         border-radius: 8px;
     }
-    
+
     .titulo-seccion {
         font-size: 1.5rem;
     }
-    
+
     .numero-grande {
         font-size: 3.5rem;
     }
-    
+
     .temporizador-circular {
         width: 75px;
         height: 75px;
     }
-    
+
     .tiempo-texto {
         font-size: 1.5rem;
     }
-    
+
     .estadisticas {
         gap: 0.7rem;
     }
-    
+
     .stat-valor {
         font-size: 1.4rem;
     }
-    
+
     .btn-incremento {
         font-size: 1.8rem;
         border-radius: 15px;
     }
-    
+
     .grid-incremento {
         gap: 0.7rem;
     }
-    
+
     .sec-num {
         width: 40px;
         height: 40px;
         font-size: 1.4rem;
     }
-    
+
     .sec-flecha, .sec-signo {
         font-size: 1.2rem;
     }
@@ -897,16 +902,16 @@ body {
         grid-template-columns: repeat(10, 1fr);
         gap: 0.2rem;
     }
-    
+
     .celda-numero {
         font-size: 0.7rem;
         border-radius: 6px;
     }
-    
+
     .numero-pregunta {
         font-size: 3.5rem;
     }
-    
+
     .btn-incremento {
         font-size: 1.5rem;
     }
@@ -916,26 +921,24 @@ body {
     .grid-numeros {
         gap: 0.8rem;
     }
-    
+
     .celda-numero {
         font-size: 1.3rem;
         border-radius: 15px;
     }
-    
+
     .opciones {
         flex-direction: row;
         max-width: 100%;
         justify-content: center;
     }
-    
+
     .btn-opcion {
         flex: 1;
         max-width: 150px;
     }
-    
+
     .grid-incremento {
         gap: 1.2rem;
     }
-}
-
-
+    }
