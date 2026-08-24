@@ -1,5 +1,6 @@
 let modoActual = 'facil';
-let tiempoLimite = 7; // segundos
+let incrementoElegido = 1;
+let tiempoLimite = 7;
 let tiempoRestante = 7;
 let temporizadorInterval = null;
 let preguntaActual = 0;
@@ -14,24 +15,104 @@ let opcionesActuales = [];
 let posicionCorrecta = 0;
 let puedeResponder = false;
 let juegoActivo = false;
+let audioContext = null;
 
-// Circunferencia del círculo SVG (2 * π * 45 ≈ 283)
+// Circunferencia del círculo SVG
 const CIRCUNFERENCIA = 283;
+
+// ============================================
+// INICIALIZACIÓN DE AUDIO
+// ============================================
+
+function inicializarAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+}
+
+// ============================================
+// SONIDOS CON WEB AUDIO API
+// ============================================
+
+function reproducirAcierto() {
+    inicializarAudio();
+    const ctx = audioContext;
+    const ahora = ctx.currentTime;
+
+    // Tono ascendente agradable (Do -> Mi -> Sol)
+    const notas = [523.25, 659.25, 783.99];
+    const duracion = 0.15;
+
+    notas.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0.3, ahora + i * duracion);
+        gain.gain.exponentialRampToValueAtTime(0.01, ahora + i * duracion + duracion);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ahora + i * duracion);
+        osc.stop(ahora + i * duracion + duracion);
+    });
+}
+
+function reproducirError() {
+    inicializarAudio();
+    const ctx = audioContext;
+    const ahora = ctx.currentTime;
+
+    // Tono descendente suave
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(300, ahora);
+    osc.frequency.exponentialRampToValueAtTime(150, ahora + 0.4);
+
+    gain.gain.setValueAtTime(0.25, ahora);
+    gain.gain.exponentialRampToValueAtTime(0.01, ahora + 0.4);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ahora);
+    osc.stop(ahora + 0.4);
+}
+
+// ============================================
+// VOZ - SPEECH SYNTHESIS
+// ============================================
+
+function hablarNumero(numero) {
+    if (!window.speechSynthesis) return;
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(numero.toString());
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.85;
+    utterance.pitch = 1.2;
+    utterance.volume = 1;
+
+    window.speechSynthesis.speak(utterance);
+}
 
 // ============================================
 // UTILIDADES
 // ============================================
 
-/**
- * Genera un número aleatorio entre min y max (inclusive)
- */
 function aleatorio(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-/**
- * Mezcla un array aleatoriamente (Fisher-Yates)
- */
 function mezclar(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -41,9 +122,6 @@ function mezclar(array) {
     return arr;
 }
 
-/**
- * Muestra una pantalla y oculta las demás
- */
 function mostrarPantalla(id) {
     document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
     document.getElementById(id).classList.add('activa');
@@ -66,6 +144,10 @@ function volverInicio() {
     detenerTemporizador();
     juegoActivo = false;
     mostrarPantalla('pantalla-inicio');
+}
+
+function volverAModos() {
+    mostrarPantalla('pantalla-modos');
 }
 
 function confirmarSalir() {
@@ -100,32 +182,71 @@ function generarGridNumeros() {
 }
 
 function seleccionarNumero(numero, elemento) {
-    // Quitar selección anterior
     document.querySelectorAll('.celda-numero').forEach(c => c.classList.remove('seleccionado'));
 
-    // Seleccionar actual
     elemento.classList.add('seleccionado');
 
-    // Mostrar en el panel destacado
     const destacado = document.querySelector('.numero-grande');
     const textoToca = document.querySelector('.texto-toca');
 
     destacado.textContent = numero;
     textoToca.textContent = '¡Número ' + numero + '!';
 
-    // Pequeño efecto de sonido visual (vibración si está disponible)
+    // Hablar el número
+    hablarNumero(numero);
+
+    // Vibración táctil
     if (navigator.vibrate) {
         navigator.vibrate(50);
     }
 }
 
 // ============================================
-// SECCIÓN: JUEGO "¿QUÉ NÚMERO SIGUE?"
+// SECCIÓN: SELECCIÓN DE INCREMENTO
 // ============================================
 
-function iniciarJuego(modo) {
+function mostrarIncremento(modo) {
     modoActual = modo;
     tiempoLimite = modo === 'facil' ? 7 : 3;
+
+    const grid = document.getElementById('grid-incremento');
+    grid.innerHTML = '';
+
+    for (let i = 1; i <= 9; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-incremento';
+        btn.textContent = i;
+        btn.setAttribute('aria-label', 'Sumar ' + i);
+
+        btn.addEventListener('click', () => {
+            inicializarAudio();
+            hablarNumero(i);
+            setTimeout(() => {
+                iniciarJuego(i);
+            }, 600);
+        });
+
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            inicializarAudio();
+            hablarNumero(i);
+            setTimeout(() => {
+                iniciarJuego(i);
+            }, 600);
+        });
+
+        grid.appendChild(btn);
+    }
+
+    mostrarPantalla('pantalla-incremento');
+}
+
+// ============================================
+// SECCIÓN: JUEGO
+// ============================================
+
+function iniciarJuego(incremento) {
+    incrementoElegido = incremento;
 
     // Reiniciar estadísticas
     preguntaActual = 0;
@@ -135,12 +256,13 @@ function iniciarJuego(modo) {
     sinResponder = 0;
     juegoActivo = true;
 
-    // Actualizar UI
-    actualizarBarraSuperior();
+    // Actualizar UI del incremento
+    document.getElementById('info-incremento').textContent = '+' + incremento;
+    document.getElementById('texto-incremento').textContent = '+' + incremento;
 
+    actualizarBarraSuperior();
     mostrarPantalla('pantalla-juego');
 
-    // Pequeña pausa antes de la primera pregunta
     setTimeout(() => {
         siguientePregunta();
     }, 500);
@@ -155,12 +277,13 @@ function siguientePregunta() {
     preguntaActual++;
     puedeResponder = true;
 
-    // Generar número aleatorio entre 1 y 99
-    numeroMostrado = aleatorio(1, 99);
-    respuestaCorrecta = numeroMostrado + 1;
+    // Generar número aleatorio entre 1 y (100 - incremento)
+    const maxNumero = 100 - incrementoElegido;
+    numeroMostrado = aleatorio(1, maxNumero);
+    respuestaCorrecta = numeroMostrado + incrementoElegido;
 
     // Generar opciones incorrectas
-    opcionesActuales = generarOpciones(numeroMostrado, respuestaCorrecta);
+    opcionesActuales = generarOpciones(respuestaCorrecta);
 
     // Mezclar opciones y recordar posición correcta
     const opcionesMezcladas = mezclar(opcionesActuales);
@@ -176,22 +299,22 @@ function siguientePregunta() {
     iniciarTemporizador();
 }
 
-function generarOpciones(numero, correcta) {
+function generarOpciones(correcta) {
     let opciones = [correcta];
 
-    // Generar dos opciones incorrectas distintas entre sí y de la correcta
+    // Generar dos opciones incorrectas distintas
     while (opciones.length < 3) {
         let incorrecta;
 
-        // Estrategia: variar entre -3 a +3 del número mostrado, evitando la correcta
-        const offset = aleatorio(-3, 3);
-        incorrecta = numero + offset;
+        // Variar entre -5 y +5 de la respuesta correcta, evitando la correcta
+        const offset = aleatorio(-5, 5);
+        incorrecta = correcta + offset;
 
-        // Asegurar que esté en rango 1-100 y sea distinta
-        if (incorrecta < 1) incorrecta = aleatorio(1, numero - 1);
-        if (incorrecta > 100) incorrecta = aleatorio(numero + 2, 100);
-        if (incorrecta === correcta) incorrecta = correcta + aleatorio(2, 4);
-        if (incorrecta > 100) incorrecta = correcta - aleatorio(2, 4);
+        // Asegurar rango 1-100
+        if (incorrecta < 1) incorrecta = aleatorio(1, correcta - 1);
+        if (incorrecta > 100) incorrecta = aleatorio(correcta + 1, 100);
+        if (incorrecta === correcta) incorrecta = correcta + aleatorio(2, 5);
+        if (incorrecta > 100) incorrecta = correcta - aleatorio(2, 5);
         if (incorrecta < 1) incorrecta = 1;
 
         // Verificar que no esté repetida
@@ -209,7 +332,7 @@ function renderizarPregunta(numero, opciones) {
 
     // Animación de entrada
     numeroEl.style.animation = 'none';
-    numeroEl.offsetHeight; // Trigger reflow
+    numeroEl.offsetHeight;
     numeroEl.style.animation = 'popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
     // Renderizar opciones
@@ -246,14 +369,11 @@ function iniciarTemporizador() {
     temporizadorInterval = setInterval(() => {
         tiempoRestante -= 0.1;
 
-        // Actualizar texto
         textoTiempo.textContent = Math.ceil(tiempoRestante);
 
-        // Actualizar círculo
         const progreso = tiempoRestante / tiempoLimite;
         actualizarCirculoTemporizador(progreso);
 
-        // Cambiar color cuando queda poco tiempo
         if (tiempoRestante <= 2) {
             circulo.classList.add('urgente');
         }
@@ -293,11 +413,13 @@ function responder(indice) {
     if (esCorrecta) {
         correctas++;
         puntos += (modoActual === 'dificil' ? 2 : 1);
+        reproducirAcierto();
         mostrarFeedbackCorrecto();
         resaltarBoton(indice, 'correcto');
         lanzarConfeti();
     } else {
         incorrectas++;
+        reproducirError();
         mostrarFeedbackIncorrecto();
         resaltarBoton(indice, 'incorrecto');
         resaltarBoton(posicionCorrecta, 'revelado');
@@ -305,10 +427,9 @@ function responder(indice) {
 
     actualizarBarraSuperior();
 
-    // Pasar a siguiente pregunta después de un intervalo
     setTimeout(() => {
         siguientePregunta();
-    }, 2000);
+    }, 2500);
 }
 
 function tiempoAgotado() {
@@ -317,6 +438,7 @@ function tiempoAgotado() {
     puedeResponder = false;
     sinResponder++;
 
+    reproducirError();
     mostrarFeedbackTiempoAgotado();
     resaltarBoton(posicionCorrecta, 'revelado');
 
@@ -353,7 +475,7 @@ function mostrarFeedbackCorrecto() {
 
     icono.textContent = '🎉';
     texto.textContent = mensajes[aleatorio(0, mensajes.length - 1)];
-    texto.style.color = '#43e97b';
+    texto.style.color = '#44A08D';
     secuencia.classList.add('oculto');
 
     feedback.classList.remove('oculto');
@@ -365,14 +487,18 @@ function mostrarFeedbackIncorrecto() {
     const texto = document.getElementById('feedback-texto');
     const secuencia = document.getElementById('secuencia-visual');
     const secAntes = document.getElementById('sec-antes');
+    const secIncremento = document.getElementById('sec-incremento');
     const secDespues = document.getElementById('sec-despues');
+    const secSigno = document.getElementById('sec-signo');
 
-    icono.textContent = '😊';
+    icono.textContent = '🐺';
     texto.textContent = '¡Casi! La respuesta era ' + respuestaCorrecta;
-    texto.style.color = '#FF6B6B';
+    texto.style.color = '#9B9BCC';
 
-    // Mostrar secuencia visual pedagógica
+    // Mostrar operación completa
     secAntes.textContent = numeroMostrado;
+    secSigno.textContent = '+';
+    secIncremento.textContent = incrementoElegido;
     secDespues.textContent = respuestaCorrecta;
     secuencia.classList.remove('oculto');
 
@@ -385,13 +511,17 @@ function mostrarFeedbackTiempoAgotado() {
     const texto = document.getElementById('feedback-texto');
     const secuencia = document.getElementById('secuencia-visual');
     const secAntes = document.getElementById('sec-antes');
+    const secIncremento = document.getElementById('sec-incremento');
     const secDespues = document.getElementById('sec-despues');
+    const secSigno = document.getElementById('sec-signo');
 
     icono.textContent = '⏰';
     texto.textContent = '¡Se acabó el tiempo! Era el ' + respuestaCorrecta;
-    texto.style.color = '#FF6B6B';
+    texto.style.color = '#9B9BCC';
 
     secAntes.textContent = numeroMostrado;
+    secSigno.textContent = '+';
+    secIncremento.textContent = incrementoElegido;
     secDespues.textContent = respuestaCorrecta;
     secuencia.classList.remove('oculto');
 
@@ -435,10 +565,12 @@ function mostrarPantallaFinal() {
         mensajeFinal.textContent = '¡Ya conoces muy bien los números!';
         trofeo.textContent = '🏆';
         lanzarConfeti();
+        reproducirAcierto();
     } else if (porcentaje >= 70) {
         tituloFinal.textContent = '¡Muy bien!';
         mensajeFinal.textContent = 'Estás aprendiendo muchísimo.';
         trofeo.textContent = '🥇';
+        reproducirAcierto();
     } else if (porcentaje >= 50) {
         tituloFinal.textContent = '¡Buen trabajo!';
         mensajeFinal.textContent = 'Sigue practicando, ¡lo estás haciendo genial!';
@@ -457,7 +589,7 @@ function mostrarPantallaFinal() {
 // ============================================
 
 function lanzarConfeti() {
-    const colores = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#95E1D3', '#F38181', '#AA96DA', '#FCBAD3'];
+    const colores = ['#5B8DEF', '#4ECDC4', '#7B68EE', '#A8D8EA', '#AA96DA', '#98D8C8', '#B8B8D1'];
     const container = document.getElementById('confeti-container');
 
     for (let i = 0; i < 40; i++) {
@@ -468,7 +600,6 @@ function lanzarConfeti() {
         confeti.style.animationDelay = (aleatorio(0, 500) / 1000) + 's';
         confeti.style.animationDuration = (aleatorio(15, 25) / 10) + 's';
 
-        // Formas variadas
         const forma = aleatorio(0, 2);
         if (forma === 0) {
             confeti.style.borderRadius = '50%';
@@ -479,7 +610,6 @@ function lanzarConfeti() {
 
         container.appendChild(confeti);
 
-        // Limpiar después de la animación
         setTimeout(() => {
             if (confeti.parentNode) {
                 confeti.parentNode.removeChild(confeti);
@@ -489,12 +619,32 @@ function lanzarConfeti() {
 }
 
 // ============================================
-// INICIALIZACIÓN
+// HUSKY - ANIMACIÓN INTERACTIVA
 // ============================================
 
+function animarHusky() {
+    const husky = document.getElementById('mascota-husky');
+    if (!husky) return;
+
+    // Cada 8 segundos, el husky hace un "ladrido" visual (escala)
+    setInterval(() => {
+        husky.style.animation = 'none';
+        husky.offsetHeight;
+        husky.style.animation = 'bounce 0.5s ease, huskyBlink 0.5s ease';
+
+        setTimeout(() => {
+            husky.style.animation = 'bounce 2s infinite, huskyBlink 4s infinite';
+        }, 500);
+    }, 8000);
+}
+
+// ============================================
+// INICIALIZACIÓN
+// ============================================ */
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Mostrar pantalla de inicio
     mostrarPantalla('pantalla-inicio');
+    animarHusky();
 
     // Prevenir zoom en doble tap en móviles
     let lastTouchEnd = 0;
@@ -505,5 +655,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         lastTouchEnd = now;
     }, false);
-});
 
+    // Inicializar audio en primer toque (requerido por algunos navegadores)
+    document.body.addEventListener('click', inicializarAudio, { once: true });
+    document.body.addEventListener('touchstart', inicializarAudio, { once: true });
+});
