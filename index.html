@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Mas vale que aprendas los numeros Caleb! >:3</title>
+    <title>¡Aprendamos los Números! 🐺</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
 </head>
 <body>
     <!-- Pantalla de inicio -->
     <div id="pantalla-inicio" class="pantalla activa">
         <div class="contenedor-inicio">
-            <div class="mascota">Black Piguave🐺</div>
-            <h1 class="titulo-principal">¡Mas vale que aprendas los numeros Caleb! >:3</h1>
-            <p class="subtitulo">Agradece que solo seran del 1 al 100</p>
+            <div class="mascota" id="mascota-husky">Black Piguave🐺</div>
+            <h1 class="titulo-principal">Numeros y Suma, Es facil Caleb...</h1>
+            <p class="subtitulo">Portate bien, es solo del 1 al 100</p>
             <div class="botones-inicio">
                 <button class="btn-grande btn-aprender" onclick="mostrarAprender()">
                     <span class="icono">📚</span>
-                    <span class="texto-btn">Aprende los numeros en bloque</span>
+                    <span class="texto-btn">Aprender los números</span>
                 </button>
                 <button class="btn-grande btn-jugar" onclick="mostrarModos()">
                     <span class="icono">🎮</span>
-                    <span class="texto-btn">A que no te atreves</span>
+                    <span class="texto-btn">¡Juguemos!</span>
                 </button>
             </div>
         </div>
@@ -30,14 +31,14 @@
     <div id="pantalla-modos" class="pantalla">
         <div class="contenedor-modos">
             <button class="btn-volver" onclick="volverInicio()">← Volver</button>
-            <h2 class="titulo-seccion">¿Elije Facil o muy facil?</h2>
+            <h2 class="titulo-seccion">¿Cómo quieres jugar Caleb?</h2>
             <div class="botones-modo">
-                <button class="btn-modo btn-facil" onclick="iniciarJuego('facil')">
+                <button class="btn-modo btn-facil" onclick="mostrarIncremento('facil')">
                     <span class="modo-icono">🌟</span>
                     <span class="modo-titulo">Modo Fácil</span>
                     <span class="modo-desc">7 segundos por pregunta</span>
                 </button>
-                <button class="btn-modo btn-dificil" onclick="iniciarJuego('dificil')">
+                <button class="btn-modo btn-dificil" onclick="mostrarIncremento('dificil')">
                     <span class="modo-icono">🚀</span>
                     <span class="modo-titulo">Modo Difícil</span>
                     <span class="modo-desc">3 segundos por pregunta</span>
@@ -46,11 +47,23 @@
         </div>
     </div>
 
+    <!-- Pantalla de selección de incremento -->
+    <div id="pantalla-incremento" class="pantalla">
+        <div class="contenedor-incremento">
+            <button class="btn-volver" onclick="volverAModos()">← Volver</button>
+            <div class="husky-incremento" id="husky-incremento">🐺</div>
+            <h2 class="titulo-seccion">¿Cuánto quieres sumar Caleb?</h2>
+            <p class="sub-incremento">Toca un número para jugar</p>
+            <div class="grid-incremento" id="grid-incremento"></div>
+            <p class="ayuda-incremento">Por ejemplo: si eliges <strong>3</strong>, siempre sumarás <strong>+3</strong></p>
+        </div>
+    </div>
+
     <!-- Pantalla de aprender números -->
     <div id="pantalla-aprender" class="pantalla">
         <div class="contenedor-aprender">
             <button class="btn-volver" onclick="volverInicio()">← Volver al inicio</button>
-            <h2 class="titulo-seccion">¡Aprendamos los números del 1 al 100!</h2>
+            <h2 class="titulo-seccion">¡Aprendamos los números Caleb del 1 al 100!</h2>
             <div id="numero-destacado" class="numero-destacado">
                 <span class="numero-grande">?</span>
                 <span class="texto-toca">Toca un número</span>
@@ -69,6 +82,7 @@
                     <span class="info-puntos">⭐ <span id="puntos">0</span></span>
                     <span class="info-pregunta">Pregunta <span id="num-pregunta">1</span> de 10</span>
                 </div>
+                <div class="info-incremento" id="info-incremento">+1</div>
             </div>
 
             <!-- Temporizador visual -->
@@ -84,7 +98,7 @@
 
             <!-- Pregunta -->
             <div class="pregunta-area">
-                <p class="pregunta-texto">¿Qué número sigue?</p>
+                <p class="pregunta-texto">¿Cuánto es <span id="texto-incremento">+1</span>?</p>
                 <div id="numero-pregunta" class="numero-pregunta">?</div>
             </div>
 
@@ -108,7 +122,9 @@
                     <p id="feedback-texto" class="feedback-texto">¡Correcto!</p>
                     <div id="secuencia-visual" class="secuencia-visual oculto">
                         <span class="sec-num" id="sec-antes"></span>
-                        <span class="sec-flecha">→</span>
+                        <span class="sec-signo" id="sec-signo">+</span>
+                        <span class="sec-num" id="sec-incremento"></span>
+                        <span class="sec-flecha">=</span>
                         <span class="sec-num" id="sec-despues"></span>
                     </div>
                 </div>
@@ -122,7 +138,7 @@
             <div class="trofeo" id="trofeo">🏆</div>
             <h2 id="titulo-final" class="titulo-final">¡Terminaste!</h2>
             <p id="mensaje-final" class="mensaje-final">¡Muy bien hecho!</p>
-
+            
             <div class="estadisticas">
                 <div class="stat">
                     <span class="stat-icono">✅</span>
@@ -165,3 +181,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
